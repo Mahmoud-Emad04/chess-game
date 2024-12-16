@@ -152,6 +152,8 @@ class ChessGame:
                             p.mixer.Sound('sounds/capture.mp3').play()
                         else:
                             p.mixer.Sound('sounds/move-self.mp3').play()
+
+
                 if not self.moveMade:
                     self.playerClicks = [self.sqSelected]
 
@@ -211,6 +213,7 @@ class ChessGame:
     def drawBoard(self):
         colors = [p.Color((235,236,208)), p.Color((115,149,82))]
         checkColor = p.Color("red")  # Color for the king in check
+
         for r in range(DIMENSION):
             for c in range(DIMENSION):
                 color = colors[((r + c) % 2)]
@@ -234,6 +237,15 @@ class ChessGame:
                     if hasattr(self.gs, 'checkmateSoundPlayed'):
                         del self.gs.checkmateSoundPlayed
                 p.draw.rect(self.screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        # # Last Move Highlight
+        # if len(self.gs.moveLog) > 0:
+        #     lastMove = self.gs.moveLog[-1]
+        #     lastMoveColor = p.Color("yellow")
+        #     s = p.Surface((SQ_SIZE, SQ_SIZE))
+        #     s.set_alpha(100)
+        #     s.fill(lastMoveColor)
+        #     self.screen.blit(s, (lastMove.endCol * SQ_SIZE, lastMove.endRow * SQ_SIZE))
+
 
     def drawPieces(self):
         for r in range(DIMENSION):
@@ -549,6 +561,9 @@ class ChessGame:
         dC = move.endCol - move.startCol
         framesPerSquare = 10
         frameCount = (abs(dR) + abs(dC)) * framesPerSquare
+
+
+
         for frame in range(frameCount + 1):
             r, c = (move.startRow + dR * frame / frameCount, move.startCol + dC * frame / frameCount)
             self.drawBoard()
