@@ -1,3 +1,4 @@
+import time
 import pygame as p
 import computer
 from engine import GameState
@@ -24,6 +25,11 @@ class ChessGame:
         self.playerOne, self.playerTwo = None, None
         self.animate = False
 
+        self.timeLeft = {"w": 900, "b": 900}  # 15 minutes (900 seconds) for each player
+        self.lastUpdateTime = time.time()  # To track elapsed time
+        self.timerRunning = True  # Timer state
+        self.increment = 2  # Increment in seconds per move (optional)
+
     def loadImages(self):
         pieces = ["wp", "wR", "wN", "wB", "wQ", "wK", "bp", "bR", "bN", "bB", "bQ", "bK"]
         for piece in pieces:
@@ -38,8 +44,48 @@ class ChessGame:
         self.loadImages()
         self.playerOne, self.playerTwo = self.showStartWindow()
 
+    def updateTimers(self):
+        # Calculate elapsed time
+        currentTime = time.time()
+        if self.timerRunning:
+            elapsedTime = currentTime - self.lastUpdateTime
+            self.lastUpdateTime = currentTime
+            # Deduct time from the active player
+            currentPlayer = "w" if self.gs.whiteToMove else "b"
+            self.timeLeft[currentPlayer] -= elapsedTime
+            if self.timeLeft[currentPlayer] <= 0:
+                self.showEndGameMessage("Timeout", "Black" if currentPlayer == "w" else "White")
+                self.timerRunning = False
+
+
+
+    def drawTimers(self):
+        # Fonts for the timers
+        font = p.font.SysFont("Helvetica", 28, True, False)
+        timerFont = p.font.SysFont("Helvetica", 24, True, False)
+
+        # White Timer
+        whiteTimerText = font.render("White Time:", 0, p.Color("white"))
+        self.screen.blit(whiteTimerText, (WIDTH + 10, 235))
+        whiteTime = self.formatTime(self.timeLeft["w"])
+        whiteTimerValue = timerFont.render(whiteTime, 0, p.Color("white"))
+        self.screen.blit(whiteTimerValue, (WIDTH + 10, 265))
+
+        # Black Timer
+        blackTimerText = font.render("Black Time:", 0, p.Color("black"))
+        self.screen.blit(blackTimerText, (WIDTH + 10, 450))
+        blackTime = self.formatTime(self.timeLeft["b"])
+        blackTimerValue = timerFont.render(blackTime, 0, p.Color("black"))
+        self.screen.blit(blackTimerValue, (WIDTH + 10, 480))
+
+    @staticmethod
+    def formatTime(seconds):
+        minutes = int(seconds) // 60
+        seconds = int(seconds) % 60
+        return f"{minutes:02}:{seconds:02}"
     def mainLoop(self):
         running = True
+        self.lastUpdateTime = time.time()  # Initialize the timer
         while running:
             humanTurn = (self.gs.whiteToMove and self.playerOne) or (not self.gs.whiteToMove and self.playerTwo)
             for e in p.event.get():
@@ -50,21 +96,29 @@ class ChessGame:
                         self.handleMouseClick(e)
                 elif e.type == p.KEYDOWN:
                     self.handleKeyPress(e)
+
             if not humanTurn:
                 self.handleAIMove()
+
+            # Update timers only during active gameplay
+            if self.timerRunning:
+                self.updateTimers()
+
             if self.moveMade:
                 if self.animate:
                     self.animateMove(self.gs.moveLog[-1])
                 self.validMoves = self.gs.getValidMoves()
                 self.moveMade = False
+
             self.drawGameState()
+
             if self.gs.checkmate or self.gs.stalemate:
-                self.showEndGameMessage("Checkmate" if self.gs.checkmate else "Stalemate", "Black" if self.gs.whiteToMove else "White")
+                self.showEndGameMessage("Checkmate" if self.gs.checkmate else "Stalemate",
+                                        "Black" if self.gs.whiteToMove else "White")
                 running = False
+
             self.clock.tick(MAX_FPS)
             p.display.flip()
-
-
 
     def handleMouseClick(self, event):
         location = p.mouse.get_pos()  # location of the mouse (x, y)
@@ -152,6 +206,7 @@ class ChessGame:
         self.highlightSquares()
         self.drawPieces()
         self.drawSidebar()
+        self.drawTimers()
 
     def drawBoard(self):
         colors = [p.Color((235,236,208)), p.Color((115,149,82))]
@@ -192,10 +247,10 @@ class ChessGame:
         sidebarRect = p.Rect(WIDTH, 0, SIDEBAR_WIDTH, HEIGHT)
         p.draw.rect(self.screen, p.Color("lightgray"), sidebarRect)
 
-        sidebarRect = p.Rect(WIDTH, 72, SIDEBAR_WIDTH, HEIGHT-320)
+        sidebarRect = p.Rect(WIDTH, 72, SIDEBAR_WIDTH, 220)
         p.draw.rect(self.screen, p.Color("Black"), sidebarRect)
 
-        sidebarRect = p.Rect(WIDTH, 265, SIDEBAR_WIDTH, HEIGHT)
+        sidebarRect = p.Rect(WIDTH, 72+220, SIDEBAR_WIDTH, 220)
         p.draw.rect(self.screen, p.Color("white"), sidebarRect)
 
         # Set up fonts
@@ -211,13 +266,13 @@ class ChessGame:
         self.screen.blit(turnText, turnIndicatorRect.move(20, 5))
 
         # Draw White Player Info (Top Half)
-        whiteTitle = titleFont.render("White", 0, p.Color("white"))
+        whiteTitle = titleFont.render("White Captured Pieces", 0, p.Color("white"))
         self.screen.blit(whiteTitle, (WIDTH + 10, 80))
 
-        whiteCapturedTitle = infoFont.render("Captured Pieces", 0, p.Color("white"))
-        self.screen.blit(whiteCapturedTitle, (WIDTH + 10, 120))
+        # whiteCapturedTitle = infoFont.render("Captured Pieces", 0, p.Color("white"))
+        # self.screen.blit(whiteCapturedTitle, (WIDTH + 10, 110))
 
-        yOffset = 150  # Start below the title
+        yOffset = 120  # Start below the title
         pieceSize = SQ_SIZE // 2  # Smaller size for captured pieces
         for i, piece in enumerate(self.capturedPieces["w"]):
             pieceImage = p.transform.scale(IMAGES[piece], (pieceSize, pieceSize))
@@ -225,13 +280,13 @@ class ChessGame:
             self.screen.blit(pieceImage, (xOffset, yOffset + (i // 4) * (pieceSize + 5)))  # Move to next row
 
         # Draw Black Player Info (Bottom Half)
-        blackTitle = titleFont.render("Black", 0, p.Color("black"))
-        self.screen.blit(blackTitle, (WIDTH + 10, HEIGHT - 230))
+        blackTitle = titleFont.render("Black Captured Pieces", 0, p.Color("black"))
+        self.screen.blit(blackTitle, (WIDTH + 10, HEIGHT - 220))
 
-        blackCapturedTitle = infoFont.render("Captured Pieces", 0, p.Color("black"))
-        self.screen.blit(blackCapturedTitle, (WIDTH + 10, HEIGHT - 190))
+        # blackCapturedTitle = infoFont.render("", 0, p.Color("black"))
+        # self.screen.blit(blackCapturedTitle, (WIDTH + 10, HEIGHT - 190))
 
-        yOffset = HEIGHT - 160  # Start above the bottom of the sidebar
+        yOffset = HEIGHT - 180  # Start above the bottom of the sidebar
         for i, piece in enumerate(self.capturedPieces["b"]):
             pieceImage = p.transform.scale(IMAGES[piece], (pieceSize, pieceSize))
             xOffset = WIDTH + 10 + (i % 4) * (pieceSize + 5)  # Move to the right
