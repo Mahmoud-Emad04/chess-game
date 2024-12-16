@@ -11,6 +11,8 @@ SQ_SIZE = HEIGHT // DIMENSION
 MAX_FPS = 15  # For animations later on
 IMAGES = {}
 depth = 2
+FirstName = "Computer"
+SecondName = "Computer"
 class ChessGame:
     def __init__(self):
         self.screen = None
@@ -175,6 +177,54 @@ class ChessGame:
         else:
             p.mixer.Sound('sounds/move-self.mp3').play()
 
+    def getPlayerName(self , flag):
+        font = p.font.SysFont("Helvetica", 32, True, False)
+
+        image = p.image.load("images/chess2.jpg")  # Load the new background image
+        image = p.transform.scale(image, (WIDTH + 600, HEIGHT))  # Adjust the size as needed
+        self.screen.blit(image, (WIDTH // 2 - image.get_width() // 2, HEIGHT // 2 - image.get_height() // 2))
+
+        input_box = p.Rect(100, 100, 140, 32)
+        color_inactive = p.Color('lightskyblue3')
+        color_active = p.Color('dodgerblue2')
+        color = color_inactive
+        active = False
+        text = ''
+        done = False
+        while not done:
+            for event in p.event.get():
+                if event.type == p.QUIT:
+                    done = True
+                if event.type == p.MOUSEBUTTONDOWN:
+                    if input_box.collidepoint(event.pos):
+                        active = not active
+                    else:
+                        active = False
+                    color = color_active if active else color_inactive
+                if event.type == p.KEYDOWN:
+                    if active:
+                        if event.key == p.K_RETURN:
+                            done = True
+                        elif event.key == p.K_BACKSPACE:
+                            text = text[:-1]
+                        else:
+                            text += event.unicode
+
+            self.screen.blit(image, (WIDTH // 2 - image.get_width() // 2, HEIGHT // 2 - image.get_height() // 2))
+            txt_surface = font.render(text, True, color)
+            width = max(200, txt_surface.get_width() + 10)
+            input_box.w = width
+            self.screen.blit(txt_surface, (input_box.x + 5, input_box.y - 5))
+            p.draw.rect( self.screen, color, input_box, 2)
+            if flag == 1 :
+                prompt_surface = font.render("Enter Name of First Player", True, p.Color('white'))
+            else :
+                prompt_surface = font.render("Enter Name of second Player", True, p.Color('white'))
+            self.screen.blit(prompt_surface, (input_box.x, input_box.y - 40))
+
+            p.display.flip()
+
+        return text
     def resetGame(self):
         self.gs = GameState()
         self.validMoves = self.gs.getValidMoves()
@@ -261,7 +311,11 @@ class ChessGame:
         turnColor = "white" if self.gs.whiteToMove else "black"
         turnIndicatorRect = p.Rect(WIDTH + 20, 20, SIDEBAR_WIDTH - 40, 40)
         p.draw.rect(self.screen, p.Color(turnColor), turnIndicatorRect, border_radius=10)
-        turnText = titleFont.render(f"{turnColor.capitalize()} to move", 0,
+        if turnColor.capitalize() == "White" :
+            turnText = titleFont.render(f"{FirstName}'s turn", 1,
+                                    p.Color("black" if turnColor == "white" else "white"))
+        else :
+            turnText = titleFont.render(f"{SecondName}'s turn", 1,
                                     p.Color("black" if turnColor == "white" else "white"))
         self.screen.blit(turnText, turnIndicatorRect.move(20, 5))
 
@@ -336,7 +390,69 @@ class ChessGame:
                     elif quitButton.collidepoint(location):
                         p.quit()
                         exit()
+    def SetTimer(self):
+        font = p.font.SysFont("Helvetica", 32, True, False)
 
+        image = p.image.load("images/chess2.jpg")
+        image = p.transform.scale(image, (WIDTH + 600, HEIGHT))  # Adjust the size as needed
+        self.screen.blit(image, (WIDTH // 2 - image.get_width() // 2, HEIGHT // 2 - image.get_height() // 2))
+
+        titleText = font.render("Choose Time", 1, p.Color((173, 173, 173)))
+        titleLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - titleText.get_width() // 2 + 110,
+                                                         HEIGHT // 4 - titleText.get_height() // 2)
+        self.screen.blit(titleText, titleLocation)
+
+        # Create surfaces for buttons with transparency
+        whiteButtonSurface = p.Surface((200, 50), p.SRCALPHA)
+        blackButtonSurface = p.Surface((200, 50), p.SRCALPHA)
+        redButtonSurface = p.Surface((200, 50), p.SRCALPHA)
+
+        # Set transparency level (0-255, where 0 is fully transparent and 255 is fully opaque)
+        transparency = 150
+        whiteButtonSurface.set_alpha(transparency)
+        blackButtonSurface.set_alpha(transparency)
+        redButtonSurface.set_alpha(transparency)
+
+        # Fill surfaces with color
+        whiteButtonSurface.fill((255, 255, 255, transparency))
+        blackButtonSurface.fill((255, 255, 255, transparency))
+        redButtonSurface.fill((255, 255, 255, transparency))
+
+        # Define button rectangles
+        whiteButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 - 50, 200, 50)
+        blackButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 + 20, 200, 50)
+        redButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 + 90, 200, 50)
+
+        # Blit surfaces onto the screen
+        self.screen.blit(whiteButtonSurface, whiteButton.topleft)
+        self.screen.blit(blackButtonSurface, blackButton.topleft)
+        self.screen.blit(redButtonSurface, redButton.topleft)
+
+        # Blit text onto the screen
+        whiteText = font.render("5", 1, p.Color("Black"))
+        blueText = font.render("10", 1, p.Color("Black"))
+        radText = font.render("15", 1, p.Color("Black"))
+        self.screen.blit(whiteText, whiteButton.move(60, 10))
+        self.screen.blit(blueText, blackButton.move(60, 10))
+        self.screen.blit(radText, redButton.move(60, 10))
+        p.display.flip()
+        waiting = True
+        while waiting:
+            for e in p.event.get():
+                if e.type == p.QUIT:
+                    p.quit()
+                    exit()
+                elif e.type == p.MOUSEBUTTONDOWN:
+                    location = p.mouse.get_pos()
+                    if whiteButton.collidepoint(location):
+                        self.timeLeft = {"w": 300, "b": 300}
+                        return
+                    elif blackButton.collidepoint(location):
+                        self.timeLeft = {"w": 600, "b": 600}
+                        return
+                    elif redButton.collidepoint(location):
+                        self.timeLeft = {"w": 900, "b": 900}
+                        return
     def showStartWindow(self):
         font = p.font.SysFont("Helvetica", 32, True, False)
 
@@ -398,6 +514,11 @@ class ChessGame:
                 elif e.type == p.MOUSEBUTTONDOWN:
                     location = p.mouse.get_pos()
                     if vsPlayerButton.collidepoint(location):
+                        self.SetTimer()
+                        global FirstName
+                        FirstName = self.getPlayerName(1)
+                        global SecondName
+                        SecondName = self.getPlayerName(2)
                         return True, True
                     elif vsComputerButton.collidepoint(location):
                         return self.showColorChoiceWindow()
@@ -508,6 +629,9 @@ class ChessGame:
         res = self.ChooseLevel()
         global depth
         depth = res
+        self.SetTimer()
+        global FirstName
+        FirstName = self.getPlayerName(1)
         return result
 
     def showPromotionChoices(self, isWhite):
