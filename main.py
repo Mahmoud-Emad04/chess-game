@@ -261,7 +261,7 @@ class ChessGame:
         font = p.font.SysFont("Helvetica", 32, True, False)
         self.screen.fill(p.Color("lightblue"))
 
-        titleText = font.render("Choose Game Mode", 0, p.Color("Black"))
+        titleText = font.render("Black & White Team", 0, p.Color("Black"))
         titleLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - titleText.get_width() // 2, HEIGHT // 4 - titleText.get_height() // 2)
         self.screen.blit(titleText, titleLocation)
 
