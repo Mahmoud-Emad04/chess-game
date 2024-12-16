@@ -66,10 +66,13 @@ def findRandomMove(validMoves):
 #         gs.undoMove()
 #     return maxScore
 
-def findBestMoveAlphaBeta(gs, validMoves):
+def findBestMoveAlphaBeta(gs, validMoves , depth):
     global nextMove
     nextMove = None
     random.shuffle(validMoves)
+    global DEPTH
+    DEPTH = depth
+    print(DEPTH)
     alphaBeta(gs, validMoves, DEPTH, -CHECKMATE, CHECKMATE, 1 if gs.whiteToMove else -1)
     return nextMove
 

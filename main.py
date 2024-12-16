@@ -4,11 +4,12 @@ from engine import GameState
 from moves import MoveGenerator, Move
 
 WIDTH = HEIGHT = 512
-SIDEBAR_WIDTH = 200
+SIDEBAR_WIDTH = 300
 DIMENSION = 8  # Chess board is 8x8
 SQ_SIZE = HEIGHT // DIMENSION
 MAX_FPS = 15  # For animations later on
 IMAGES = {}
+depth = 2
 class ChessGame:
     def __init__(self):
         self.screen = None
@@ -109,7 +110,7 @@ class ChessGame:
             self.resetGame()
 
     def handleAIMove(self):
-        AIMove = computer.findBestMoveAlphaBeta(self.gs, self.validMoves)
+        AIMove = computer.findBestMoveAlphaBeta(self.gs, self.validMoves , depth)
         if AIMove is None:
             AIMove = computer.findRandomMove(self.validMoves)
         self.gs.makeMove(AIMove)
@@ -189,32 +190,56 @@ class ChessGame:
     def drawSidebar(self):
         # Draw the sidebar background
         sidebarRect = p.Rect(WIDTH, 0, SIDEBAR_WIDTH, HEIGHT)
-        p.draw.rect(self.screen, p.Color("gray"), sidebarRect)
+        p.draw.rect(self.screen, p.Color("lightgray"), sidebarRect)
 
-        # Set up font
-        font = p.font.SysFont("Helvetica", 24, True, False)
+        sidebarRect = p.Rect(WIDTH, 72, SIDEBAR_WIDTH, HEIGHT-320)
+        p.draw.rect(self.screen, p.Color("Black"), sidebarRect)
 
-        # Display whose turn it is using color
-        turnColor = p.Color("white") if self.gs.whiteToMove else p.Color("black")
-        turnRect = p.Rect(WIDTH + 10, 10, 30, 30)
-        p.draw.rect(self.screen, turnColor, turnRect)
-        # Display captured pieces
-        yOffset = 60
+        sidebarRect = p.Rect(WIDTH, 265, SIDEBAR_WIDTH, HEIGHT)
+        p.draw.rect(self.screen, p.Color("white"), sidebarRect)
+
+        # Set up fonts
+        titleFont = p.font.SysFont("Helvetica", 28, True, False)
+        infoFont = p.font.SysFont("Helvetica", 20, True, False)
+
+        # Draw the turn indicator
+        turnColor = "white" if self.gs.whiteToMove else "black"
+        turnIndicatorRect = p.Rect(WIDTH + 20, 20, SIDEBAR_WIDTH - 40, 40)
+        p.draw.rect(self.screen, p.Color(turnColor), turnIndicatorRect, border_radius=10)
+        turnText = titleFont.render(f"{turnColor.capitalize()} to move", 0,
+                                    p.Color("black" if turnColor == "white" else "white"))
+        self.screen.blit(turnText, turnIndicatorRect.move(20, 5))
+
+        # Draw White Player Info (Top Half)
+        whiteTitle = titleFont.render("White", 0, p.Color("white"))
+        self.screen.blit(whiteTitle, (WIDTH + 10, 80))
+
+        whiteCapturedTitle = infoFont.render("Captured Pieces", 0, p.Color("white"))
+        self.screen.blit(whiteCapturedTitle, (WIDTH + 10, 120))
+
+        yOffset = 150  # Start below the title
         pieceSize = SQ_SIZE // 2  # Smaller size for captured pieces
-        for color, pieces in self.capturedPieces.items():
-            colorText = "White captured:" if color == "w" else "Black captured:"
-            colorObject = font.render(colorText, 0, p.Color("Black"))
-            self.screen.blit(colorObject, (WIDTH + 10, yOffset))
-            yOffset += 30
-            xOffset = WIDTH + 10
-            for i, piece in enumerate(pieces):
-                pieceImage = p.transform.scale(IMAGES[piece], (pieceSize, pieceSize))
-                self.screen.blit(pieceImage, (xOffset, yOffset))
-                xOffset += pieceSize + 5  # Move to the right for the next piece
-                if (i + 1) % 4 == 0:  # Move to the next row after 4 pieces
-                    xOffset = WIDTH + 10
-                    yOffset += pieceSize + 5  # Add some space between rows
-            yOffset += pieceSize + 10  # Add some space between different color sections
+        for i, piece in enumerate(self.capturedPieces["w"]):
+            pieceImage = p.transform.scale(IMAGES[piece], (pieceSize, pieceSize))
+            xOffset = WIDTH + 10 + (i % 4) * (pieceSize + 5)  # Move to the right
+            self.screen.blit(pieceImage, (xOffset, yOffset + (i // 4) * (pieceSize + 5)))  # Move to next row
+
+        # Draw Black Player Info (Bottom Half)
+        blackTitle = titleFont.render("Black", 0, p.Color("black"))
+        self.screen.blit(blackTitle, (WIDTH + 10, HEIGHT - 230))
+
+        blackCapturedTitle = infoFont.render("Captured Pieces", 0, p.Color("black"))
+        self.screen.blit(blackCapturedTitle, (WIDTH + 10, HEIGHT - 190))
+
+        yOffset = HEIGHT - 160  # Start above the bottom of the sidebar
+        for i, piece in enumerate(self.capturedPieces["b"]):
+            pieceImage = p.transform.scale(IMAGES[piece], (pieceSize, pieceSize))
+            xOffset = WIDTH + 10 + (i % 4) * (pieceSize + 5)  # Move to the right
+            self.screen.blit(pieceImage, (xOffset, yOffset + (i // 4) * (pieceSize + 5)))  # Move to next row
+
+        # Add separators between sections for clarity
+        p.draw.line(self.screen, p.Color("black"), (WIDTH, 70), (WIDTH + SIDEBAR_WIDTH, 70), 2)  # Top divider
+        p.draw.line(self.screen, p.Color("black"), (WIDTH, HEIGHT - 250), (WIDTH + SIDEBAR_WIDTH, HEIGHT - 250),2)  # Bottom divider
 
     def showEndGameMessage(self, message, winner):
         font = p.font.SysFont("Helvetica", 32, True, False)
@@ -259,24 +284,56 @@ class ChessGame:
 
     def showStartWindow(self):
         font = p.font.SysFont("Helvetica", 32, True, False)
-        self.screen.fill(p.Color("lightblue"))
 
-        titleText = font.render("Black & White Team", 0, p.Color("Black"))
-        titleLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - titleText.get_width() // 2, HEIGHT // 4 - titleText.get_height() // 2)
+        image = p.image.load("images/chess2.jpg")
+        image = p.transform.scale(image, (WIDTH+600, HEIGHT))  # Adjust the size as needed
+        self.screen.blit(image, (WIDTH // 2 - image.get_width() // 2, HEIGHT // 2 - image.get_height() // 2))
+
+
+        titleText = font.render("Black & White Team", 1, p.Color((255,255,255)))
+        titleLocation = p.Rect(WIDTH // 2 - 60, HEIGHT // 2 - 200, 200, 50).move(180 - titleText.get_width() // 2,
+                                                                                 25 - titleText.get_height() // 2)
+        # Render the title with a shadow for better visibility
+        shadow_offset = 2
+        titleShadow = font.render("Black & White Team", True, (0, 0, 0))  # Black shadow
+        titleText = font.render("Black & White Team", True, p.Color((168, 168, 168)))
+
+        # Blit shadow first (offset) and then text
+        self.screen.blit(titleShadow, (titleLocation.x + shadow_offset, titleLocation.y + shadow_offset))
         self.screen.blit(titleText, titleLocation)
 
-        vsPlayerButton = p.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 50, 200, 50)
-        vsComputerButton = p.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 20, 200, 50)
-        p.draw.rect(self.screen, p.Color("blue"), vsPlayerButton, border_radius=10)
-        p.draw.rect(self.screen, p.Color("blue"), vsComputerButton, border_radius=10)
+        vsPlayerText = font.render("Player vs Player", 1, p.Color((1, 4, 41)))
+        vsComputerText = font.render("Player vs Computer", 1, p.Color((1, 4, 41)))
 
-        vsPlayerText = font.render("Player vs Player", 0, p.Color("white"))
-        vsComputerText = font.render("Player vs Computer", 0, p.Color("white"))
-        self.screen.blit(vsPlayerText, vsPlayerButton.move(20, 10))
-        self.screen.blit(vsComputerText, vsComputerButton.move(10, 10))
+        vsPlayerButton = p.Rect(WIDTH // 2 - vsPlayerText.get_width() // 2 + 110, HEIGHT // 2 - 70,
+                                vsPlayerText.get_width() + 20, 50)
+        vsComputerButton = p.Rect(WIDTH // 2 - vsComputerText.get_width() // 2 + 110, HEIGHT // 2,
+                                  vsComputerText.get_width() + 20, 50)
 
+        # Create surfaces for buttons with transparency
+        vsPlayerSurface = p.Surface((vsPlayerButton.width, vsPlayerButton.height), p.SRCALPHA)
+        vsComputerSurface = p.Surface((vsComputerButton.width, vsComputerButton.height), p.SRCALPHA)
+
+        # Set transparency level (0-255, where 0 is fully transparent and 255 is fully opaque)
+        transparency = 100
+        vsPlayerSurface.set_alpha(transparency)
+        vsComputerSurface.set_alpha(transparency)
+
+        # Fill surfaces with color
+        vsPlayerSurface.fill((230, 229, 197, transparency))
+        vsComputerSurface.fill((230, 229, 197, transparency))
+
+        # Blit surfaces onto the screen
+        self.screen.blit(vsPlayerSurface, vsPlayerButton.topleft)
+        self.screen.blit(vsComputerSurface, vsComputerButton.topleft)
+
+        # Blit text onto the screen
+        self.screen.blit(vsPlayerText, vsPlayerButton.move((vsPlayerButton.width - vsPlayerText.get_width()) // 2,
+                                                           (vsPlayerButton.height - vsPlayerText.get_height()) // 2))
+        self.screen.blit(vsComputerText,
+                         vsComputerButton.move((vsComputerButton.width - vsComputerText.get_width()) // 2,
+                                               (vsComputerButton.height - vsComputerText.get_height()) // 2))
         p.display.flip()
-
         waiting = True
         while waiting:
             for e in p.event.get():
@@ -289,27 +346,52 @@ class ChessGame:
                         return True, True
                     elif vsComputerButton.collidepoint(location):
                         return self.showColorChoiceWindow()
-
-    def showColorChoiceWindow(self):
+    def ChooseLevel(self):
         font = p.font.SysFont("Helvetica", 32, True, False)
-        self.screen.fill(p.Color("lightgreen"))
 
-        titleText = font.render("Choose Your Color", 0, p.Color("Black"))
-        titleLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - titleText.get_width() // 2, HEIGHT // 4 - titleText.get_height() // 2)
+        image = p.image.load("images/chess2.jpg")
+        image = p.transform.scale(image, (WIDTH+600 , HEIGHT))  # Adjust the size as needed
+        self.screen.blit(image, (WIDTH // 2 - image.get_width() // 2, HEIGHT // 2 - image.get_height() // 2))
+
+        titleText = font.render("Choose Your Level", 1, p.Color((173, 173, 173)))
+        titleLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - titleText.get_width() // 2 + 110,
+                                                         HEIGHT // 4 - titleText.get_height() // 2)
         self.screen.blit(titleText, titleLocation)
 
-        whiteButton = p.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 50, 200, 50)
-        blackButton = p.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 20, 200, 50)
-        p.draw.rect(self.screen, p.Color("white"), whiteButton, border_radius=10)
-        p.draw.rect(self.screen, p.Color("black"), blackButton, border_radius=10)
+        # Create surfaces for buttons with transparency
+        whiteButtonSurface = p.Surface((200, 50), p.SRCALPHA)
+        blackButtonSurface = p.Surface((200, 50), p.SRCALPHA)
+        redButtonSurface = p.Surface((200, 50), p.SRCALPHA)
 
-        whiteText = font.render("White", 0, p.Color("Black"))
-        blackText = font.render("Black", 0, p.Color("White"))
+        # Set transparency level (0-255, where 0 is fully transparent and 255 is fully opaque)
+        transparency = 150
+        whiteButtonSurface.set_alpha(transparency)
+        blackButtonSurface.set_alpha(transparency)
+        redButtonSurface.set_alpha(transparency)
+
+        # Fill surfaces with color
+        whiteButtonSurface.fill((255, 255, 255, transparency))
+        blackButtonSurface.fill((0, 0, 255, transparency))
+        redButtonSurface.fill((255, 0, 0, transparency))
+
+        # Define button rectangles
+        whiteButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 - 50, 200, 50)
+        blackButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 + 20, 200, 50)
+        redButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 + 90, 200, 50)
+
+        # Blit surfaces onto the screen
+        self.screen.blit(whiteButtonSurface, whiteButton.topleft)
+        self.screen.blit(blackButtonSurface, blackButton.topleft)
+        self.screen.blit(redButtonSurface, redButton.topleft)
+
+        # Blit text onto the screen
+        whiteText = font.render("Eazy", 1, p.Color("Black"))
+        blueText = font.render("mid", 1, p.Color("Black"))
+        radText = font.render("Hard", 1, p.Color("Black"))
         self.screen.blit(whiteText, whiteButton.move(60, 10))
-        self.screen.blit(blackText, blackButton.move(60, 10))
-
+        self.screen.blit(blueText, blackButton.move(60, 10))
+        self.screen.blit(radText, redButton.move(60, 10))
         p.display.flip()
-
         waiting = True
         while waiting:
             for e in p.event.get():
@@ -319,16 +401,66 @@ class ChessGame:
                 elif e.type == p.MOUSEBUTTONDOWN:
                     location = p.mouse.get_pos()
                     if whiteButton.collidepoint(location):
-                        return True, False
+                        return 2
                     elif blackButton.collidepoint(location):
-                        return False, True
+                        return 3
+                    elif redButton.collidepoint(location):
+                        return 4
+    def showColorChoiceWindow(self):
+        font = p.font.SysFont("Helvetica", 32, True, False)
+
+
+        image = p.image.load("images/chess2.jpg")
+        image = p.transform.scale(image, (WIDTH + 600, HEIGHT))  # Adjust the size as needed
+        self.screen.blit(image, (WIDTH // 2 - image.get_width() // 2, HEIGHT // 2 - image.get_height() // 2))
+
+        titleText = font.render("Choose Your Color", 1, p.Color((173, 173, 173)))
+        titleLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - titleText.get_width() // 2 + 110, HEIGHT // 4 - titleText.get_height() // 2)
+        self.screen.blit(titleText, titleLocation)
+
+
+        whiteButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 - 50, 200, 50)
+        blackButton = p.Rect(WIDTH // 2 + 10, HEIGHT // 2 + 20, 200, 50)
+        p.draw.rect(self.screen, p.Color("white"), whiteButton, border_radius=10)
+        p.draw.rect(self.screen, p.Color("black"), blackButton, border_radius=10)
+
+        whiteText = font.render("White", 1, p.Color("Black"))
+        blackText = font.render("Black", 1, p.Color("White"))
+        self.screen.blit(whiteText, whiteButton.move(60, 10))
+        self.screen.blit(blackText, blackButton.move(60, 10))
+
+        p.display.flip()
+        result = None
+        waiting = True
+        while waiting:
+            flag = 1
+            for e in p.event.get():
+                if e.type == p.QUIT:
+                    p.quit()
+                    exit()
+                elif e.type == p.MOUSEBUTTONDOWN:
+                    location = p.mouse.get_pos()
+                    if whiteButton.collidepoint(location):
+                        result =  (True , False)
+                        flag = 0
+                        break
+                    elif blackButton.collidepoint(location):
+                        result = (False, True)
+                        flag = 0
+                        break
+            if flag == 0:
+                break
+        res = self.ChooseLevel()
+        global depth
+        depth = res
+        return result
 
     def showPromotionChoices(self, isWhite):
         font = p.font.SysFont("Helvetica", 24, True, False)
         promotionRect = p.Rect(WIDTH + 10, HEIGHT // 2 - 100, 180, 200)
         p.draw.rect(self.screen, p.Color("lightyellow"), promotionRect)
 
-        titleText = font.render("Promote to:", 0, p.Color("Black"))
+        titleText = font.render("Promote to:", 1, p.Color("Black"))
         self.screen.blit(titleText, promotionRect.move(10, 10))
 
         pieces = ["Q", "R", "N", "B"]
@@ -339,7 +471,7 @@ class ChessGame:
             p.draw.rect(self.screen, p.Color("blue"), button, border_radius=5)
             pieceImage = p.transform.scale(IMAGES[pieceImages[i]], (30, 30))
             self.screen.blit(pieceImage, button.move(10, 0))
-            pieceText = font.render(piece, 0, p.Color("white"))
+            pieceText = font.render(piece, 1, p.Color("white"))
             self.screen.blit(pieceText, button.move(50, 0))
             buttons.append((button, piece))
 
