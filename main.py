@@ -689,8 +689,8 @@ class ChessGame:
             p.display.flip()
             self.clock.tick(150)
 
-
 if __name__ == "__main__":
     game = ChessGame()
     game.initializeGame()
+    p.mixer.Sound('sounds/2.mp3').play()
     game.mainLoop()
