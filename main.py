@@ -30,7 +30,6 @@ class ChessGame:
         self.timeLeft = {"w": 900, "b": 900}  # 15 minutes (900 seconds) for each player
         self.lastUpdateTime = time.time()  # To track elapsed time
         self.timerRunning = True  # Timer state
-        self.increment = 2  # Increment in seconds per move (optional)
 
     def loadImages(self):
         pieces = ["wp", "wR", "wN", "wB", "wQ", "wK", "bp", "bR", "bN", "bB", "bQ", "bK"]
@@ -136,7 +135,7 @@ class ChessGame:
                 self.selectedPieceMoves = [move for move in self.validMoves if move.startRow == row and move.startCol == col]
             if len(self.playerClicks) == 2:  # After the 2nd click
                 move = Move(self.playerClicks[0], self.playerClicks[1], self.gs.board)
-                print(move.getChessNotation())
+                # print(move.getChessNotation())
                 for i in range(len(self.validMoves)):
                     if move == self.validMoves[i]:
                         if move.isPawnPromotion:
@@ -263,7 +262,7 @@ class ChessGame:
     def drawBoard(self):
         colors = [p.Color((235,236,208)), p.Color((115,149,82))]
         checkColor = p.Color("red")  # Color for the king in check
-
+        font = p.font.SysFont("Helvetica", 18, True, False)
         for r in range(DIMENSION):
             for c in range(DIMENSION):
                 color = colors[((r + c) % 2)]
@@ -287,14 +286,14 @@ class ChessGame:
                     if hasattr(self.gs, 'checkmateSoundPlayed'):
                         del self.gs.checkmateSoundPlayed
                 p.draw.rect(self.screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
-        # # Last Move Highlight
-        # if len(self.gs.moveLog) > 0:
-        #     lastMove = self.gs.moveLog[-1]
-        #     lastMoveColor = p.Color("yellow")
-        #     s = p.Surface((SQ_SIZE, SQ_SIZE))
-        #     s.set_alpha(100)
-        #     s.fill(lastMoveColor)
-        #     self.screen.blit(s, (lastMove.endCol * SQ_SIZE, lastMove.endRow * SQ_SIZE))
+                # Draw file and rank labels
+                color= (115,149,82) if (r+c)%2 == 0 else (235,236,208)
+                if r == DIMENSION - 1:  # Draw file labels (a-h) at the bottom
+                    file_label = font.render(chr(c + ord('a')), True, p.Color(color))
+                    self.screen.blit(file_label, (c * SQ_SIZE +54, HEIGHT - 20))
+                if c == 0:  # Draw rank labels (1-8) on the left
+                    rank_label = font.render(str(DIMENSION - r), True, p.Color(color))
+                    self.screen.blit(rank_label, (5, r * SQ_SIZE + 5))
 
 
     def drawPieces(self):

@@ -72,7 +72,7 @@ def findBestMoveAlphaBeta(gs, validMoves , depth):
     random.shuffle(validMoves)
     global DEPTH
     DEPTH = depth
-    print(DEPTH)
+    # print(DEPTH)
     alphaBeta(gs, validMoves, DEPTH, -CHECKMATE, CHECKMATE, 1 if gs.whiteToMove else -1)
     return nextMove
 
