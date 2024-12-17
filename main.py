@@ -167,9 +167,12 @@ class ChessGame:
             self.resetGame()
 
     def handleAIMove(self):
+        self.lastUpdateTime = time.time()
         AIMove = computer.findBestMoveAlphaBeta(self.gs, self.validMoves , depth)
         if AIMove is None:
             AIMove = computer.findRandomMove(self.validMoves)
+        if self.timerRunning:
+            self.updateTimers()
         self.gs.makeMove(AIMove)
         self.moveMade = True
         if AIMove.pieceCaptured != "--":
